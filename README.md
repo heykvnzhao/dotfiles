@@ -1,4 +1,4 @@
-# kvnzhao's dotfiles
+# dotfiles
 
 This repo contains the source of truth for agent prompts, skills, AGENTS.md files, and other configuration details. It also contains sync scripts that helps keep local configs consistent.
 
