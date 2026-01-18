@@ -24,6 +24,7 @@ Please refer to `.local/PROFILE.md` for information about me.
 ## Coding/development preferences
 
 - Write idiomatic, simple, maintainable code. Always ask yourself if this is the most simple intuitive solution to the problem.
+- Prefer small helpers or state-driven flow to keep cyclomatic complexity low when it improves readability.
 - Leave each repo better than how you found it. If something is giving a code smell, fix it for the next person.
 - Clean up unused code ruthlessly. If a function no longer needs a parameter or a helper is dead, delete it and update the callers instead of letting the junk linger.
 - New deps: quick health check (recent releases/commits, adoption).
