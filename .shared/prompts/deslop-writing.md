@@ -1,3 +1,6 @@
+---
+description: Use when you want to clean AI-style prose in a diff, focusing on tone, redundancy, and filler so the writing reads like a concise human edit.
+---
 # Remove AI writing slop
 
 Check the diff against main, and remove all AI generated writing slop introduced in this branch.

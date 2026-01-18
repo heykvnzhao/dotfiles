@@ -1,3 +1,6 @@
+---
+description: Use when reviewing a diff to strip AI-introduced code smells like unnecessary comments, over-defensive checks, or type hacks, and align with local style.
+---
 # Remove AI code slop
 
 Check the diff against main, and remove all AI generated slop introduced in this branch.
