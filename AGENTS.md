@@ -4,6 +4,9 @@ This repository contains dotfiles source for agent prompts, skills, AGENTS guida
 and sync helpers. Most automation is Bash. Some skills include Python or Node.js
 helpers.
 
+Note: this repo is public. Avoid committing personal info, secrets, or identifying
+credentials.
+
 ## Repo layout
 
 - `README.md` lists the supported agent tools.
