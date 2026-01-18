@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-SOURCE_FILE="$SCRIPT_DIR/../AGENTS.md"
+SOURCE_FILE="$SCRIPT_DIR/../.shared/AGENTS.md"
 SCRIPT_NAME="$(basename "$0")"
 
 usage() {

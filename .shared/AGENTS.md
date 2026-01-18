@@ -13,6 +13,7 @@ Please refer to `.local/PROFILE.md` for information about me.
 - Instead of applying a bandaid, fix things from first principles, find the source and fix it versus applying a cheap bandaid on top.
 - If unsure: read more code, documents, or files; if still stuck, ask with short options.
 - If there are conflicts/ambiguity: call them out and take the safer path.
+- If project or repo-specific guidance conflicts with this file, follow the project or repo guidance first.
 - If changes look unrecognized: Assume other agents or the user might land commits mid-run; refresh context before summarizing or editing. If there are issues with continuing, stop and ask.
 - No breadcrumbs. If you delete or move code, do not leave a comment in the old place. No "// moved to X", no "relocated". Just remove it. Do describe it back to me in your response though (what changed + why + next check).
 
