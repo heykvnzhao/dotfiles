@@ -1,5 +1,9 @@
 ---
 description: Use when reviewing a diff to strip AI-introduced code smells like unnecessary comments, over-defensive checks, or type hacks, and align with local style.
+codex.argument-hint:
+opencode.agent:
+opencode.model:
+opencode.subtask:
 ---
 # Remove AI code slop
 

@@ -1,5 +1,9 @@
 ---
 description: Use when you want to clean AI-style prose in a diff, focusing on tone, redundancy, and filler so the writing reads like a concise human edit.
+codex.argument-hint:
+opencode.agent:
+opencode.model:
+opencode.subtask:
 ---
 # Remove AI writing slop
 
