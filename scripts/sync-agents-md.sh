@@ -19,8 +19,8 @@ log_action() {
 apply_action() {
   local action="$1"
   local message="$2"
-  local source_path="$3"
-  local target_path="$4"
+  local source_path="${3:-}"
+  local target_path="${4:-}"
 
   case "$action" in
     ADD)

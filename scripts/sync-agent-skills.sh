@@ -19,8 +19,8 @@ log_action() {
 apply_action() {
   local action="$1"
   local message="$2"
-  local skill_path="$3"
-  local target_path="$4"
+  local skill_path="${3:-}"
+  local target_path="${4:-}"
 
   case "$action" in
     ADD)
@@ -70,7 +70,7 @@ while [ $# -gt 0 ]; do
       ;;
   esac
   shift
-fi
+done
 
 shopt -s nullglob
 
