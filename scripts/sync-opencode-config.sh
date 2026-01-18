@@ -7,15 +7,77 @@ TARGET_DIR="$HOME/.config/opencode"
 SCRIPT_NAME="$(basename "$0")"
 
 usage() {
-  printf 'Usage: %s [--dry-run]\n\n' "$SCRIPT_NAME"
+  printf 'Usage: %s [--dry-run] [--verbose]\n\n' "$SCRIPT_NAME"
   printf 'Options:\n'
-  printf '  --dry-run   Show what would change without modifying anything\n'
-  printf '  -h, --help  Show this help message\n'
+  printf '  --dry-run    Show what would change without modifying anything\n'
+  printf '  --verbose    Show skipped items\n'
+  printf '  -h, --help   Show this help message\n'
 }
 
-log_action() {
-  printf '  %-6s %s\n' "$1" "$2"
+COLOR_RESET=$'\033[0m'
+COLOR_DIM=$'\033[2m'
+COLOR_GREEN=$'\033[32m'
+COLOR_YELLOW=$'\033[33m'
+COLOR_CYAN=$'\033[36m'
+
+color_enabled=false
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  color_enabled=true
+fi
+
+colorize() {
+  local color="$1"
+  shift
+
+  if [ "$color_enabled" = true ]; then
+    printf '%b%s%b' "$color" "$*" "$COLOR_RESET"
+  else
+    printf '%s' "$*"
+  fi
 }
+
+action_label() {
+  local action="$1"
+
+  case "$action" in
+    ADD)
+      colorize "$COLOR_GREEN" "$action"
+      ;;
+    UPDATE)
+      colorize "$COLOR_YELLOW" "$action"
+      ;;
+    PLAN)
+      colorize "$COLOR_CYAN" "$action"
+      ;;
+    SKIP)
+      colorize "$COLOR_DIM" "$action"
+      ;;
+    *)
+      printf '%s' "$action"
+      ;;
+  esac
+}
+
+print_target_header() {
+  if [ "$target_started" = false ]; then
+    printf '%s\n' "$(colorize "$COLOR_CYAN" "Target: $current_target_label")"
+    printf '  %-7s %s\n' "$(colorize "$COLOR_DIM" "ACTION")" "ITEM"
+    target_started=true
+  fi
+}
+
+print_action() {
+  local action="$1"
+  local message="$2"
+
+  print_target_header
+  printf '  %-7s %s\n' "$(action_label "$action")" "$message"
+}
+
+skip_entries=()
+missing_entries=()
+current_target_label="OpenCode"
+target_started=false
 
 apply_action() {
   local action="$1"
@@ -36,18 +98,20 @@ apply_action() {
   esac
 
   if [ "$action" = "SKIP" ]; then
-    log_action "$action" "$message"
+    if [ "$VERBOSE" = true ]; then
+      skip_entries+=("$current_target_label|$message")
+    fi
     return
   fi
 
   if [ "$DRY_RUN" = true ]; then
-    log_action "PLAN" "$message"
+    print_action "PLAN" "$message"
     return
   fi
 
   mkdir -p "$(dirname "$target_path")"
   replace_with_symlink "$source_path" "$target_path"
-  log_action "$action" "$message"
+  print_action "$action" "$message"
 }
 
 replace_with_symlink() {
@@ -104,16 +168,23 @@ if [ ! -d "$SOURCE_DIR" ]; then
 fi
 
 if [ ! -d "$TARGET_DIR" ]; then
-  printf 'SKIP missing target: %s\n' "$TARGET_DIR"
+  missing_entries+=("OpenCode|$TARGET_DIR")
+  printf 'Missing targets:\n'
+  printf '  %-12s %s\n' "OpenCode" "$TARGET_DIR"
   printf 'Tip: create %s to enable OpenCode config sync.\n' "$TARGET_DIR"
+  printf 'Summary: add 0, update 0, skip 0\n'
   exit 0
 fi
 
 DRY_RUN=false
+VERBOSE=false
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run)
       DRY_RUN=true
+      ;;
+    --verbose|-v)
+      VERBOSE=true
       ;;
     -h|--help)
       usage
@@ -126,7 +197,8 @@ while [ $# -gt 0 ]; do
       ;;
   esac
   shift
-done
+ done
+
 
 add_count=0
 update_count=0
@@ -142,11 +214,22 @@ if [ "${#source_files[@]}" -eq 0 ]; then
   exit 0
 fi
 
-printf 'Syncing OpenCode config from %s to %s\n' "$SOURCE_DIR" "$TARGET_DIR"
-
 for source_file in "${source_files[@]}"; do
   sync_file "$source_file"
 done
+
+if [ "$target_started" = true ]; then
+  echo ""
+fi
+
+if [ "$VERBOSE" = true ] && [ "${#skip_entries[@]}" -gt 0 ]; then
+  printf 'Skipped:\n'
+  for entry in "${skip_entries[@]}"; do
+    IFS='|' read -r skip_label skip_message <<<"$entry"
+    printf '  %-12s %s\n' "$skip_label" "$skip_message"
+  done
+  echo ""
+fi
 
 summary_label="Summary"
 if [ "$DRY_RUN" = true ]; then

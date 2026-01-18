@@ -6,14 +6,71 @@ SOURCE_DIR="$SCRIPT_DIR/../.shared/skills"
 SCRIPT_NAME="$(basename "$0")"
 
 usage() {
-  printf 'Usage: %s [--dry-run]\n\n' "$SCRIPT_NAME"
+  printf 'Usage: %s [--dry-run] [--verbose]\n\n' "$SCRIPT_NAME"
   printf 'Options:\n'
-  printf '  --dry-run   Show what would change without modifying anything\n'
-  printf '  -h, --help  Show this help message\n'
+  printf '  --dry-run    Show what would change without modifying anything\n'
+  printf '  --verbose    Show skipped items\n'
+  printf '  -h, --help   Show this help message\n'
 }
 
-log_action() {
-  printf '  %-6s %s\n' "$1" "$2"
+COLOR_RESET=$'\033[0m'
+COLOR_DIM=$'\033[2m'
+COLOR_GREEN=$'\033[32m'
+COLOR_YELLOW=$'\033[33m'
+COLOR_CYAN=$'\033[36m'
+
+color_enabled=false
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  color_enabled=true
+fi
+
+colorize() {
+  local color="$1"
+  shift
+
+  if [ "$color_enabled" = true ]; then
+    printf '%b%s%b' "$color" "$*" "$COLOR_RESET"
+  else
+    printf '%s' "$*"
+  fi
+}
+
+action_label() {
+  local action="$1"
+
+  case "$action" in
+    ADD)
+      colorize "$COLOR_GREEN" "$action"
+      ;;
+    UPDATE)
+      colorize "$COLOR_YELLOW" "$action"
+      ;;
+    PLAN)
+      colorize "$COLOR_CYAN" "$action"
+      ;;
+    SKIP)
+      colorize "$COLOR_DIM" "$action"
+      ;;
+    *)
+      printf '%s' "$action"
+      ;;
+  esac
+}
+
+print_target_header() {
+  if [ "$target_started" = false ]; then
+    printf '%s\n' "$(colorize "$COLOR_CYAN" "Target: $current_target_label")"
+    printf '  %-7s %s\n' "$(colorize "$COLOR_DIM" "ACTION")" "ITEM"
+    target_started=true
+  fi
+}
+
+print_action() {
+  local action="$1"
+  local message="$2"
+
+  print_target_header
+  printf '  %-7s %s\n' "$(action_label "$action")" "$message"
 }
 
 apply_action() {
@@ -35,17 +92,19 @@ apply_action() {
   esac
 
   if [ "$action" = "SKIP" ]; then
-    log_action "$action" "$message"
+    if [ "$VERBOSE" = true ]; then
+      skip_entries+=("$current_target_label|$message")
+    fi
     return
   fi
 
   if [ "$DRY_RUN" = true ]; then
-    log_action "PLAN" "$message"
+    print_action "PLAN" "$message"
     return
   fi
 
   replace_with_symlink "$skill_path" "$target_path"
-  log_action "$action" "$message"
+  print_action "$action" "$message"
 }
 
 if [ ! -d "$SOURCE_DIR" ]; then
@@ -54,10 +113,14 @@ if [ ! -d "$SOURCE_DIR" ]; then
 fi
 
 DRY_RUN=false
+VERBOSE=false
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run)
       DRY_RUN=true
+      ;;
+    --verbose|-v)
+      VERBOSE=true
       ;;
     -h|--help)
       usage
@@ -70,7 +133,8 @@ while [ $# -gt 0 ]; do
       ;;
   esac
   shift
-done
+ done
+
 
 shopt -s nullglob
 
@@ -86,6 +150,11 @@ TARGETS=(
 add_count=0
 update_count=0
 skip_count=0
+
+skip_entries=()
+missing_entries=()
+current_target_label=""
+target_started=false
 
 replace_with_symlink() {
   local skill_path="$1"
@@ -108,7 +177,7 @@ sync_target() {
   local target_dir="$3"
 
   if [ ! -d "$root_dir" ]; then
-    printf 'SKIP missing config (%s): %s\n' "$label" "$root_dir"
+    missing_entries+=("$label|$root_dir")
     return
   fi
 
@@ -116,7 +185,8 @@ sync_target() {
     mkdir -p "$target_dir"
   fi
 
-  printf 'Syncing to %s: %s\n' "$label" "$target_dir"
+  current_target_label="$label"
+  target_started=false
 
   for skill_dir in "$SOURCE_DIR"/*; do
     if [ ! -d "$skill_dir" ]; then
@@ -155,13 +225,34 @@ sync_target() {
 
     apply_action "ADD" "add symlink: $skill_name" "$skill_path" "$target_path"
   done
+
+  if [ "$target_started" = true ]; then
+    echo ""
+  fi
 }
 
 for target in "${TARGETS[@]}"; do
   IFS=: read -r label root_dir target_dir <<<"$target"
   sync_target "$label" "$root_dir" "$target_dir"
-  echo ""
 done
+
+if [ "$VERBOSE" = true ] && [ "${#skip_entries[@]}" -gt 0 ]; then
+  printf 'Skipped:\n'
+  for entry in "${skip_entries[@]}"; do
+    IFS='|' read -r skip_label skip_message <<<"$entry"
+    printf '  %-12s %s\n' "$skip_label" "$skip_message"
+  done
+  echo ""
+fi
+
+if [ "${#missing_entries[@]}" -gt 0 ]; then
+  printf 'Missing configs:\n'
+  for entry in "${missing_entries[@]}"; do
+    IFS='|' read -r missing_label missing_path <<<"$entry"
+    printf '  %-12s %s\n' "$missing_label" "$missing_path"
+  done
+  echo ""
+fi
 
 summary_label="Summary"
 if [ "$DRY_RUN" = true ]; then

@@ -25,14 +25,71 @@ TARGETS=(
 )
 
 usage() {
-  printf 'Usage: %s [--dry-run]\n\n' "$SCRIPT_NAME"
+  printf 'Usage: %s [--dry-run] [--verbose]\n\n' "$SCRIPT_NAME"
   printf 'Options:\n'
-  printf '  --dry-run   Show what would change without modifying anything\n'
-  printf '  -h, --help  Show this help message\n'
+  printf '  --dry-run    Show what would change without modifying anything\n'
+  printf '  --verbose    Show skipped items\n'
+  printf '  -h, --help   Show this help message\n'
 }
 
-log_action() {
-  printf '  %-6s %s\n' "$1" "$2"
+COLOR_RESET=$'\033[0m'
+COLOR_DIM=$'\033[2m'
+COLOR_GREEN=$'\033[32m'
+COLOR_YELLOW=$'\033[33m'
+COLOR_CYAN=$'\033[36m'
+
+color_enabled=false
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  color_enabled=true
+fi
+
+colorize() {
+  local color="$1"
+  shift
+
+  if [ "$color_enabled" = true ]; then
+    printf '%b%s%b' "$color" "$*" "$COLOR_RESET"
+  else
+    printf '%s' "$*"
+  fi
+}
+
+action_label() {
+  local action="$1"
+
+  case "$action" in
+    ADD)
+      colorize "$COLOR_GREEN" "$action"
+      ;;
+    UPDATE)
+      colorize "$COLOR_YELLOW" "$action"
+      ;;
+    PLAN)
+      colorize "$COLOR_CYAN" "$action"
+      ;;
+    SKIP)
+      colorize "$COLOR_DIM" "$action"
+      ;;
+    *)
+      printf '%s' "$action"
+      ;;
+  esac
+}
+
+print_target_header() {
+  if [ "$target_started" = false ]; then
+    printf '%s\n' "$(colorize "$COLOR_CYAN" "Target: $current_target_label")"
+    printf '  %-7s %s\n' "$(colorize "$COLOR_DIM" "ACTION")" "ITEM"
+    target_started=true
+  fi
+}
+
+print_action() {
+  local action="$1"
+  local message="$2"
+
+  print_target_header
+  printf '  %-7s %s\n' "$(action_label "$action")" "$message"
 }
 
 apply_action() {
@@ -54,18 +111,20 @@ apply_action() {
   esac
 
   if [ "$action" = "SKIP" ]; then
-    log_action "$action" "$message"
+    if [ "$VERBOSE" = true ]; then
+      skip_entries+=("$current_target_label|$message")
+    fi
     return
   fi
 
   if [ "$DRY_RUN" = true ]; then
-    log_action "PLAN" "$message"
+    print_action "PLAN" "$message"
     return
   fi
 
   mkdir -p "$(dirname "$target_path")"
   cp "$source_path" "$target_path"
-  log_action "$action" "$message"
+  print_action "$action" "$message"
 }
 
 trim() {
@@ -287,10 +346,14 @@ if [ ! -d "$SOURCE_DIR" ]; then
 fi
 
 DRY_RUN=false
+VERBOSE=false
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run)
       DRY_RUN=true
+      ;;
+    --verbose|-v)
+      VERBOSE=true
       ;;
     -h|--help)
       usage
@@ -303,11 +366,17 @@ while [ $# -gt 0 ]; do
       ;;
   esac
   shift
-done
+ done
+
 
 add_count=0
 update_count=0
 skip_count=0
+
+skip_entries=()
+missing_entries=()
+current_target_label=""
+target_started=false
 
 if ! command -v mktemp >/dev/null 2>&1; then
   printf 'mktemp is required for this script.\n' >&2
@@ -326,21 +395,23 @@ if [ "${#prompt_files[@]}" -eq 0 ]; then
   exit 0
 fi
 
-for prompt_file in "${prompt_files[@]}"; do
-  if ! parse_front_matter "$prompt_file"; then
-    exit 1
+for target in "${TARGETS[@]}"; do
+  IFS=: read -r target_name root_dir target_dir <<<"$target"
+
+  if [ ! -d "$root_dir" ]; then
+    missing_entries+=("$target_name|$root_dir")
+    continue
   fi
 
-  rel_path="${prompt_file#"$SOURCE_DIR"/}"
+  current_target_label="$target_name"
+  target_started=false
 
-  for target in "${TARGETS[@]}"; do
-    IFS=: read -r target_name root_dir target_dir <<<"$target"
-
-    if [ ! -d "$root_dir" ]; then
-      printf 'SKIP missing config (%s): %s\n' "$target_name" "$root_dir"
-      continue
+  for prompt_file in "${prompt_files[@]}"; do
+    if ! parse_front_matter "$prompt_file"; then
+      exit 1
     fi
 
+    rel_path="${prompt_file#"$SOURCE_DIR"/}"
     target_path="$target_dir/$rel_path"
     temp_file="$(mktemp)"
     render_output "$target_name" "$prompt_file" "$temp_file"
@@ -360,7 +431,30 @@ for prompt_file in "${prompt_files[@]}"; do
     apply_action "ADD" "$target_name add: $rel_path" "$temp_file" "$target_path"
     rm -f "$temp_file"
   done
-done
+
+  if [ "$target_started" = true ]; then
+    echo ""
+  fi
+ done
+
+
+if [ "$VERBOSE" = true ] && [ "${#skip_entries[@]}" -gt 0 ]; then
+  printf 'Skipped:\n'
+  for entry in "${skip_entries[@]}"; do
+    IFS='|' read -r skip_label skip_message <<<"$entry"
+    printf '  %-12s %s\n' "$skip_label" "$skip_message"
+  done
+  echo ""
+fi
+
+if [ "${#missing_entries[@]}" -gt 0 ]; then
+  printf 'Missing configs:\n'
+  for entry in "${missing_entries[@]}"; do
+    IFS='|' read -r missing_label missing_path <<<"$entry"
+    printf '  %-12s %s\n' "$missing_label" "$missing_path"
+  done
+  echo ""
+fi
 
 summary_label="Summary"
 
