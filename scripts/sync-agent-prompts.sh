@@ -19,9 +19,9 @@ DROP_NAMESPACES_CODEX=("opencode")
 DROP_NAMESPACES_OPENCODE=("codex")
 
 TARGETS=(
-  "kiro:$HOME/.kiro/prompts"
-  "codex:$HOME/.codex/prompts"
-  "opencode:$HOME/.config/opencode/commands"
+  "kiro:$HOME/.kiro:$HOME/.kiro/prompts"
+  "codex:$HOME/.codex:$HOME/.codex/prompts"
+  "opencode:$HOME/.config/opencode:$HOME/.config/opencode/commands"
 )
 
 usage() {
@@ -334,10 +334,10 @@ for prompt_file in "${prompt_files[@]}"; do
   rel_path="${prompt_file#"$SOURCE_DIR"/}"
 
   for target in "${TARGETS[@]}"; do
-    IFS=: read -r target_name target_dir <<<"$target"
+    IFS=: read -r target_name root_dir target_dir <<<"$target"
 
-    if [ ! -d "$target_dir" ]; then
-      printf 'SKIP missing target (%s): %s\n' "$target_name" "$target_dir"
+    if [ ! -d "$root_dir" ]; then
+      printf 'SKIP missing config (%s): %s\n' "$target_name" "$root_dir"
       continue
     fi
 

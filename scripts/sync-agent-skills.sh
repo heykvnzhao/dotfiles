@@ -75,12 +75,12 @@ done
 shopt -s nullglob
 
 TARGETS=(
-  "OpenCode:$HOME/.config/opencode/skills"
-  "Claude Code:$HOME/.claude/skills"
-  "Codex:$HOME/.codex/skills"
-  "Kiro:$HOME/.kiro/skills"
-  "Gemini CLI:$HOME/.gemini/skills"
-  "Antigravity:$HOME/.gemini/antigravity/skills"
+  "OpenCode:$HOME/.config/opencode:$HOME/.config/opencode/skills"
+  "Claude Code:$HOME/.claude:$HOME/.claude/skills"
+  "Codex:$HOME/.codex:$HOME/.codex/skills"
+  "Kiro:$HOME/.kiro:$HOME/.kiro/skills"
+  "Gemini CLI:$HOME/.gemini:$HOME/.gemini/skills"
+  "Antigravity:$HOME/.gemini:$HOME/.gemini/antigravity/skills"
 )
 
 add_count=0
@@ -104,11 +104,16 @@ is_up_to_date_copy() {
 
 sync_target() {
   local label="$1"
-  local target_dir="$2"
+  local root_dir="$2"
+  local target_dir="$3"
 
-  if [ ! -d "$target_dir" ]; then
-    printf 'SKIP missing target (%s): %s\n' "$label" "$target_dir"
+  if [ ! -d "$root_dir" ]; then
+    printf 'SKIP missing config (%s): %s\n' "$label" "$root_dir"
     return
+  fi
+
+  if [ ! -d "$target_dir" ] && [ "$DRY_RUN" = false ]; then
+    mkdir -p "$target_dir"
   fi
 
   printf 'Syncing to %s: %s\n' "$label" "$target_dir"
@@ -153,8 +158,8 @@ sync_target() {
 }
 
 for target in "${TARGETS[@]}"; do
-  IFS=: read -r label target_dir <<<"$target"
-  sync_target "$label" "$target_dir"
+  IFS=: read -r label root_dir target_dir <<<"$target"
+  sync_target "$label" "$root_dir" "$target_dir"
   echo ""
 done
 
