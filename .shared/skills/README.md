@@ -6,3 +6,4 @@
 - `docx`, `pdf`, `pptx` and `xlsx` skills are pulled from [Anthropic's Skill repo](https://github.com/anthropics/skills).
 - `react-best-practices` is pulled from [Vercel's Agent Skills repo](https://github.com/vercel-labs/agent-skills/).
 - `web-ui-best-practices` is created here (but inspired by others; documented in the folder).
+- `writing-humanizer` is pulled from [blader/humanizer](https://github.com/blader/humanizer/tree/main) (created by Siqi Chen).
