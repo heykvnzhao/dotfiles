@@ -1,6 +1,6 @@
 ---
-name: create-plan
-description: Create a concise plan. Use when a user explicitly asks for a plan related to a coding task.
+name: create-coding-plan
+description: Create a concise, actionable coding plan. Triggers when user asks to "plan", "outline", "scope", or "break down" a coding task, or requests a checklist before implementation.
 metadata:
   short-description: Create a plan
 ---
