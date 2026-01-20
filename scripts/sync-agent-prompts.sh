@@ -24,6 +24,8 @@ TARGETS=(
   "opencode:$HOME/.config/opencode:$HOME/.config/opencode/commands"
 )
 
+BUILD_ROOT="${SYNC_AGENT_PROMPTS_BUILD_ROOT:-$HOME/.cache/sync-agent-prompts}"
+
 usage() {
   printf 'Usage: %s [--dry-run] [--verbose]\n\n' "$SCRIPT_NAME"
   printf 'Options:\n'
@@ -122,9 +124,17 @@ apply_action() {
     return
   fi
 
-  mkdir -p "$(dirname "$target_path")"
-  cp "$source_path" "$target_path"
+  replace_with_symlink "$source_path" "$target_path"
   print_action "$action" "$message"
+}
+
+replace_with_symlink() {
+  local source_path="$1"
+  local target_path="$2"
+
+  rm -rf "$target_path"
+  mkdir -p "$(dirname "$target_path")"
+  ln -s "$source_path" "$target_path"
 }
 
 trim() {
@@ -416,20 +426,30 @@ for target in "${TARGETS[@]}"; do
     temp_file="$(mktemp)"
     render_output "$target_name" "$prompt_file" "$temp_file"
 
-    if [ -e "$target_path" ]; then
-      if diff -q "$temp_file" "$target_path" >/dev/null 2>&1; then
-        apply_action "SKIP" "$target_name up-to-date: $rel_path" "$temp_file" "$target_path"
-        rm -f "$temp_file"
-        continue
-      fi
+    build_path="$BUILD_ROOT/$target_name/$rel_path"
+    build_dir="$(dirname "$build_path")"
 
-      apply_action "UPDATE" "$target_name update: $rel_path" "$temp_file" "$target_path"
+    if [ -e "$build_path" ] && diff -q "$temp_file" "$build_path" >/dev/null 2>&1; then
+      apply_action "SKIP" "symlink ok: $rel_path" "$build_path" "$target_path"
       rm -f "$temp_file"
       continue
     fi
 
-    apply_action "ADD" "$target_name add: $rel_path" "$temp_file" "$target_path"
-    rm -f "$temp_file"
+    action_message="add symlink: $rel_path"
+    action="ADD"
+    if [ -e "$build_path" ]; then
+      action="UPDATE"
+      action_message="update symlink: $rel_path"
+    fi
+
+    if [ "$DRY_RUN" = false ]; then
+      mkdir -p "$build_dir"
+      mv "$temp_file" "$build_path"
+    else
+      rm -f "$temp_file"
+    fi
+
+    apply_action "$action" "$action_message" "$build_path" "$target_path"
   done
 
   if [ "$target_started" = true ]; then
