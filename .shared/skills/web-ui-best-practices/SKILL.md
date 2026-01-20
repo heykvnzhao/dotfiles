@@ -1,6 +1,6 @@
 ---
 name: web-ui-best-practices
-description: Opinionated constraints for building better user interfaces with agents. Use this skill when the user asks to build or review web components, pages, or applications.
+description: Opinionated constraints for building better user interfaces. Triggers on building or reviewing web components, pages, forms, modals, animations, or any frontend UI work. Covers accessibility, focus states, touch interactions, and performance.
 ---
 
 # Web UI Best Practices
