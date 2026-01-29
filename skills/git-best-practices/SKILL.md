@@ -18,17 +18,6 @@ description: Safe-by-default git workflow and Conventional Commits. Triggers on 
   - `rm`
   - Force push
 
-## Commit Planning
-
-When reviewing changes for commits:
-
-1. Review all staged and unstaged changes
-2. Identify untracked files, ignored files, and anything that should not be committed
-3. Propose clean commit groups that are logically related and minimal
-4. Explain which files belong to each commit and why
-5. If there are dependencies between commits, order them
-6. If files should be removed or ignored, say so explicitly
-
 ## Conventional Commits
 
 Format: `<type>[optional scope][optional !]: <description>`
