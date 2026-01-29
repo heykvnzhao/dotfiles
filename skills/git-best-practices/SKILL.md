@@ -1,26 +1,35 @@
 ---
 name: git-best-practices
-description: Safe-by-default git workflow and Conventional Commits. Triggers on git operations, reviewing diffs, staging files, creating commits, or branch changes. Prevents destructive operations without consent.
+description: Safe-by-default git workflow and Conventional Commits. Use for git operations (diffs, staging, commits, branches, merges, conflict resolution, rebase/cherry-pick), PR review, and releases (tagging). Prevent destructive operations without consent.
 ---
 
 # Git Best Practices
 
 ## Safety Rules
 
-- **Read-only by default**: `git status`, `git diff`, `git log` are always safe
+- **Read-only by default**: Prefer `git status`, `git diff`, `git log`, `git show`, `git blame` before making changes
 - **Push requires explicit request**: Never push unless user asks
 - **Checkout allowed for**: PR review, explicit user request
 - **Branch changes require consent**: Ask before creating/switching branches
-- **Destructive ops forbidden** unless explicit user consent:
-  - `reset --hard`
-  - `clean`
-  - `restore`
-  - `rm`
-  - Force push
+- **History rewriting requires consent**: Ask before `commit --amend`, interactive rebase, or force push (especially if anything may be shared)
+- **Destructive ops require explicit user consent**:
+  - Allow previews like `git clean -n` (no deletion); do not run `git clean -fd` without consent
+  - Do not discard worktree changes with `git reset --hard` or `git restore .` without consent
+  - Do not delete branches/tags or force push without consent
+
+## Preferred Commands
+
+- Prefer modern porcelain: `git switch` (branches) and `git restore` (undo) when appropriate
+- `git restore --staged <path>` is usually safe; discarding worktree changes (e.g., `git restore .`) requires explicit consent
 
 ## Conventional Commits
 
 Format: `<type>[optional scope][optional !]: <description>`
+
+### Subject Line
+
+- Use imperative mood (“add”, “fix”, “remove”)
+- Keep it short and specific; avoid trailing periods
 
 ### Types
 
@@ -73,6 +82,15 @@ refactor(db)!: migrate from MySQL to PostgreSQL
 
 BREAKING CHANGE: database connection config format changed
 ```
+
+## Pre-Commit Checklist
+
+- Review `git status`
+- Review `git diff` and `git diff --staged`
+- Run the smallest relevant checks if known (or ask what to run)
+- Scan for secrets (tokens, keys, credentials) and unintended debug logs
+- Prefer small, logical commits; use `git add -p` when changes are mixed
+- Propose a commit split and draft commit messages before staging/committing
 
 ## Workflow
 
